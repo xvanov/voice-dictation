@@ -1,145 +1,62 @@
-# voice-dictation
+# ai-tools
 
-Push-to-talk voice dictation using [faster-whisper](https://github.com/SYSTRAN/faster-whisper).
-Press a global hotkey (`Ctrl+Alt+V` by default), speak, press again — the transcript
-lands on your clipboard. Works on Linux (X11/GNOME) and Windows.
+Internal tooling for AI-assisted workflows: push-to-talk dictation, batch transcription/summarization, and Claude Code utilities.
 
-Architecture is dead simple:
+## Tools
 
-```
-hotkey -> record .wav -> TCP client -> always-warm server -> faster-whisper -> clipboard
-```
+| Tool | Description |
+|------|-------------|
+| [voice-dictation](./voice-dictation/) | Push-to-talk voice transcription via faster-whisper → auto-paste (Windows + Linux) |
+| [summarize-day](./summarize-day/) | Batch transcribe long recordings and summarize via Azure OpenAI |
+| [claude-ctx-statusline](./claude-ctx-statusline/) | Shows context window usage in the Claude Code status bar |
 
-The model stays loaded in GPU memory between presses, so the second press to
-clipboard takes ~1 second for short utterances. The server unloads itself
-after 30 min idle to free VRAM.
+## Quick start
 
-## Quick install
-
-### Linux (Ubuntu / GNOME)
-
-```bash
-git clone https://github.com/xvanov/voice-dictation.git
-cd voice-dictation
-./linux/install.sh
-```
-
-Then bind a global hotkey in **Settings -> Keyboard -> Custom Shortcuts** to:
-
-```
-~/.local/voice-dictation/voice-toggle.sh
-```
-
-Suggested binding: `Ctrl+Alt+V`.
-
-### Windows 10/11
-
-Open an **elevated PowerShell** in the cloned repo:
+### Voice dictation (Windows)
 
 ```powershell
+cd voice-dictation
 Set-ExecutionPolicy -Scope Process Bypass
 .\windows\install.ps1
 ```
 
-The installer registers the server as a Scheduled Task at logon and drops the
-AutoHotkey hotkey script into your Startup folder. Hotkey is `Ctrl+Alt+V`.
+Press `Ctrl+Alt+V` to record. Recording auto-stops on silence; transcript is cleaned up and pasted at the cursor.
 
-## Configuration
-
-Both platforms read these environment variables (defaults shown):
-
-| Variable           | Default     | Notes                                       |
-| ------------------ | ----------- | ------------------------------------------- |
-| `WHISPER_MODEL`    | `small`     | `tiny`, `base`, `small`, `medium`, `large-v3` |
-| `WHISPER_DEVICE`   | `cuda`      | Set to `cpu` if you have no NVIDIA GPU      |
-| `WHISPER_COMPUTE`  | `float16`   | CPU users: set to `int8`                    |
-| `WHISPER_LANGUAGE` | `en`        | Use `auto` for multilingual                 |
-| `TRANSCRIBE_PORT`  | `47821`     | Loopback TCP port                           |
-| `IDLE_TIMEOUT_SEC` | `1800`      | Seconds before unloading the model          |
-
-On Linux they go in the systemd unit (`~/.config/systemd/user/voice-dictation.service`).
-On Windows they're baked into `start-server.bat` by the installer.
-
-## Picking a model
-
-- **`small`** (default): ~470 MB, very accurate for short utterances, GPU 1-2 GB.
-- `tiny`: ~75 MB, low-latency, mediocre accuracy. Good for slow CPUs.
-- `large-v3`: best accuracy, needs ~5 GB VRAM and is noticeably slower.
-
-The weights download to `~/.cache/huggingface/hub/` (Linux) or
-`%USERPROFILE%\.cache\huggingface\hub\` (Windows) on first run.
-
-## Files
-
-| Path                          | Purpose                                      |
-| ----------------------------- | -------------------------------------------- |
-| `transcribe.py`               | One-shot CLI (loads model every call; slow)  |
-| `transcribe_server.py`        | Always-warm TCP server                       |
-| `transcribe_client.py`        | TCP client used by the hotkey wrappers       |
-| `linux/voice-toggle.sh`       | Linux hotkey toggle (uses `arecord` + `xclip`) |
-| `linux/install.sh`            | Linux installer + systemd --user unit         |
-| `windows/voice-toggle.ahk`    | Windows hotkey (AutoHotkey v2)               |
-| `windows/install.ps1`         | Windows installer + scheduled task           |
-| `AGENT.md`                    | Detailed install/troubleshoot guide for agents |
-
-## Troubleshooting
-
-- **"No speech detected"** — the server probably isn't running.
-  - Linux: `systemctl --user status voice-dictation` and `journalctl --user -u voice-dictation -n 50`.
-  - Windows: open Task Scheduler, find `VoiceDictationServer`, check Last Run Result.
-- **CUDA / cuDNN error on first request** — the installer should have pip-installed
-  `nvidia-cudnn-cu12` and `nvidia-cublas-cu12`. If it didn't, install them manually
-  into the venv, or switch to CPU mode (`WHISPER_DEVICE=cpu`, `WHISPER_COMPUTE=int8`).
-- **Hotkey does nothing on Linux** — confirm the custom shortcut command path is
-  correct and that `arecord`, `xclip`, and `notify-send` are installed.
-
-See [AGENT.md](AGENT.md) for step-by-step install instructions structured for
-coding agents.
-
----
-
-## summarize-day — batch transcription & summarization
-
-Also included in this repo: **summarize-day**, a CLI tool that transcribes long
-audio recordings with faster-whisper and summarizes them via Azure AI Foundry.
-It's the same engine as the dictation tool but geared for batch processing.
-
-### Requirements
-
-- Python 3.10+
-- An Azure AI Foundry endpoint + API key
-
-### Configuration (environment variables)
-
-| Variable | Description |
-|---|---|
-| `AZURE_FOUNDRY_ENDPOINT` | Azure AI Foundry endpoint URL |
-| `AZURE_FOUNDRY_API_KEY` | API key |
-| `AZURE_FOUNDRY_API_VERSION` | API version (default: `2024-05-01-preview`) |
-| `AZURE_FOUNDRY_DEPLOYMENT` | Model name (default: `deepseek-r1`) |
-
-### Usage
+### Voice dictation (Linux)
 
 ```bash
-# Full pipeline: transcribe then summarize
-./summarize-day.py run recording.mp3
-./summarize-day.py run /path/to/recordings/
-
-# Step by step
-./summarize-day.py transcribe recording.mp3
-./summarize-day.py summarize recording.json
-
-# Combine existing summaries into a day-summary
-./summarize-day.py combine /path/to/recordings/
+cd voice-dictation
+./linux/install.sh
 ```
 
-Options: `--force` to redo, `--device cpu` for CPU, `--model tiny` for smaller model.
+Bind `~/.local/voice-dictation/voice-toggle.sh` to `Ctrl+Alt+V` in keyboard settings.
 
-### Output
+### summarize-day
 
-For each audio file `recording.mp3`:
-- `recording.json` — aligned segments with timestamps
-- `recording.srt` / `recording.vtt` / `recording.txt` — subtitle/text exports
-- `recording.summary.md` — AI-generated summary
+```bash
+cd summarize-day
+python -m venv .venv
+source .venv/bin/activate   # Windows: .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+# Set AZURE_OPENAI_* or AZURE_FOUNDRY_* in repo-root .env
+python summarize-day.py run recording.mp3
+```
 
-When processing multiple files, `day-summary.md` merges them into one digest.
+### Claude context status line
+
+```powershell
+cd claude-ctx-statusline
+.\install.ps1
+```
+
+Restart Claude Code to see `Ctx: 30k/200k (15%)` in the status bar.
+
+## Repo layout
+
+```
+voice-dictation/          # real-time dictation (recorder + overlay + warm server)
+summarize-day/              # batch transcribe + Azure summarization CLI
+claude-ctx-statusline/      # Claude Code statusLine helper
+```
+
+Each tool has its own README, requirements, and install scripts.

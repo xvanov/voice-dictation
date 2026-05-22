@@ -7,7 +7,7 @@ Usage:
   summarize-day.py run <file-or-dir>...
   summarize-day.py combine <file-or-dir>...
 
-Environment:
+Environment (repo-root .env or shell):
   AZURE_FOUNDRY_ENDPOINT     Azure AI Foundry endpoint URL
   AZURE_FOUNDRY_API_KEY      API key
   AZURE_FOUNDRY_API_VERSION  API version (default: 2024-05-01-preview)

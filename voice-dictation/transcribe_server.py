@@ -17,6 +17,7 @@ import gc
 import os
 import socket
 import sys
+import tempfile
 import threading
 import time
 
@@ -76,15 +77,26 @@ def _transcribe(audio_path: str) -> str:
         return " ".join(seg.text.strip() for seg in segments)
 
 
+def _write_info_file() -> None:
+    import json
+    path = os.path.join(tempfile.gettempdir(), "vd-server-info.json")
+    with open(path, "w") as f:
+        json.dump({"model": MODEL_NAME, "device": DEVICE, "compute": COMPUTE}, f)
+
+
 def main() -> int:
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server.bind((HOST, PORT))
+    try:
+        server.bind((HOST, PORT))
+    except OSError:
+        print(f"Port {PORT} already in use — another instance is running. Exiting.", flush=True)
+        return 1
     server.listen(4)
 
+    _write_info_file()
     threading.Thread(target=_idle_watcher, daemon=True).start()
 
-    print(f"Listening on {HOST}:{PORT}. Idle unload after {IDLE_TIMEOUT}s.", flush=True)
+    print(f"Listening on {HOST}:{PORT}  model={MODEL_NAME}/{DEVICE}. Idle unload after {IDLE_TIMEOUT}s.", flush=True)
     while True:
         conn, _addr = server.accept()
         try:

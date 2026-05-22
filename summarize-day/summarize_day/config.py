@@ -17,7 +17,7 @@ def load_dotenv() -> None:
         from dotenv import load_dotenv as _load
     except ImportError:
         return
-    repo_root = Path(__file__).resolve().parents[1]
+    repo_root = Path(__file__).resolve().parents[2]
     _load(repo_root / ".env", override=False)
 
 

@@ -9,6 +9,7 @@
 #   $env:WHISPER_MODEL    = 'medium'    # tiny/base/small/medium/large-v3
 #   $env:WHISPER_DEVICE   = 'cuda'      # or 'cpu'
 #   $env:WHISPER_COMPUTE  = 'float16'   # cpu: 'int8'
+#   $env:VD_DEVICE        = 'Yeti'      # mic name substring or device index (run recorder.py --list-devices to see options)
 
 $ErrorActionPreference = 'Stop'
 
@@ -16,9 +17,10 @@ $RepoDir    = Split-Path -Parent $PSScriptRoot
 $InstallDir = Join-Path $env:LOCALAPPDATA 'voice-dictation'
 $VenvDir    = Join-Path $InstallDir 'venv'
 
-$Model   = if ($env:WHISPER_MODEL)   { $env:WHISPER_MODEL }   else { 'medium' }
-$Device  = if ($env:WHISPER_DEVICE)  { $env:WHISPER_DEVICE }  else { 'cuda' }
-$Compute = if ($env:WHISPER_COMPUTE) { $env:WHISPER_COMPUTE } else { 'float16' }
+$Model    = if ($env:WHISPER_MODEL)   { $env:WHISPER_MODEL }   else { 'small' }
+$Device   = if ($env:WHISPER_DEVICE)  { $env:WHISPER_DEVICE }  else { 'cuda' }
+$Compute  = if ($env:WHISPER_COMPUTE) { $env:WHISPER_COMPUTE } else { 'float16' }
+$VdDevice = if ($env:VD_DEVICE)       { $env:VD_DEVICE }       else { '' }
 
 Write-Host "==> Installing voice-dictation to $InstallDir (model=$Model device=$Device compute=$Compute)"
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
@@ -51,23 +53,9 @@ function Require-Cmd($name, $wingetId) {
 }
 
 Require-Cmd 'python'     'Python.Python.3.11'
-Require-Cmd 'sox'        'ChrisBagwell.SoX'
 Require-Cmd 'AutoHotkey' 'AutoHotkey.AutoHotkey'
 
-# Copy sox.exe + its DLLs into InstallDir so voice-toggle.ahk finds them without
-# PATH lookup. AHK does not inherit user PATH; sox also needs its bundled DLLs
-# (libssp-0.dll, libgcc_s_sjlj-1.dll, etc.) in the same directory as sox.exe.
-$_soxCmd = Get-Command sox -ErrorAction SilentlyContinue
-if ($_soxCmd) {
-    $_soxDir = Split-Path $_soxCmd.Source
-    Copy-Item $_soxCmd.Source (Join-Path $InstallDir 'sox.exe') -Force
-    Get-ChildItem $_soxDir -Filter '*.dll' | ForEach-Object {
-        Copy-Item $_.FullName (Join-Path $InstallDir $_.Name) -Force
-    }
-    Write-Host "==> Copied sox.exe + DLLs to $InstallDir"
-} else {
-    Write-Warning "sox not found in PATH after install - voice-toggle.ahk may fail. Re-run installer from a fresh shell."
-}
+# sounddevice bundles its own PortAudio on Windows - no separate install needed.
 
 if (-not (Test-Path (Join-Path $VenvDir 'Scripts\python.exe'))) {
     Write-Host "==> Creating venv"
@@ -86,12 +74,16 @@ if ($Device -eq 'cuda') {
 }
 
 Write-Host "==> Copying scripts"
-Copy-Item (Join-Path $RepoDir 'transcribe.py')            (Join-Path $InstallDir 'transcribe.py')        -Force
-Copy-Item (Join-Path $RepoDir 'transcribe_server.py')     (Join-Path $InstallDir 'transcribe_server.py') -Force
-Copy-Item (Join-Path $RepoDir 'transcribe_client.py')     (Join-Path $InstallDir 'transcribe_client.py') -Force
-Copy-Item (Join-Path $RepoDir 'windows\voice-toggle.ahk') (Join-Path $InstallDir 'voice-toggle.ahk')     -Force
+$scripts = @(
+    'transcribe.py', 'transcribe_server.py', 'transcribe_client.py',
+    'recorder.py', 'overlay.py', 'llm_cleanup.py'
+)
+foreach ($s in $scripts) {
+    Copy-Item (Join-Path $RepoDir $s) (Join-Path $InstallDir $s) -Force
+}
+Copy-Item (Join-Path $RepoDir 'windows\voice-toggle.ahk') (Join-Path $InstallDir 'voice-toggle.ahk') -Force
 
-# Batch launcher — sets env vars and starts the server.
+# Batch launcher — sets env vars and starts the transcription server.
 $LauncherBat = Join-Path $InstallDir 'start-server.bat'
 @"
 @echo off
@@ -101,6 +93,12 @@ set WHISPER_COMPUTE=$Compute
 "$VenvPy" "$InstallDir\transcribe_server.py"
 "@ | Set-Content -Encoding ASCII $LauncherBat
 
+# VD_DEVICE persists as a user env var so the AHK-launched recorder inherits it.
+if ($VdDevice) {
+    [Environment]::SetEnvironmentVariable('VD_DEVICE', $VdDevice, 'User')
+    Write-Host "==> Set user env VD_DEVICE=$VdDevice (mic device for recorder)"
+}
+
 Write-Host "==> Registering scheduled task VoiceDictationServer (run at logon)"
 $TaskName = 'VoiceDictationServer'
 schtasks /Delete /TN $TaskName /F 2>$null | Out-Null
@@ -109,8 +107,6 @@ schtasks /Run /TN $TaskName | Out-Null
 
 Write-Host "==> Adding AutoHotkey script to startup (per-user)"
 
-# Get-Command may not find AutoHotkey immediately after winget installs it in
-# the same session. Fall back to known install locations.
 $_ahkcmd = Get-Command AutoHotkey -ErrorAction SilentlyContinue
 $AhkExe = if ($_ahkcmd) { $_ahkcmd.Source } else { $null }
 if (-not $AhkExe) {
@@ -136,11 +132,17 @@ $Shortcut.Arguments        = "`"$AhkTarget`""
 $Shortcut.WorkingDirectory = $InstallDir
 $Shortcut.Save()
 
-# Launch immediately so the hotkey is live without a reboot.
+# Kill any existing AHK instance of this script before launching fresh.
+Get-Process AutoHotkey -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Process $AhkExe -ArgumentList "`"$AhkTarget`""
 
 Write-Host ""
 Write-Host "==> Done. Model: $Model | Device: $Device | Compute: $Compute"
-Write-Host "Hotkey  : Ctrl+Alt+V (toggle record/transcribe)"
+Write-Host "Hotkey  : Ctrl+Alt+V (toggle record/transcribe)  |  Esc (cancel)"
 Write-Host "Task    : VoiceDictationServer (Task Scheduler)"
 Write-Host "Install : $InstallDir"
+Write-Host ""
+Write-Host "Mic setup:"
+Write-Host "  List devices : & '$VenvPy' '$InstallDir\recorder.py' --list-devices"
+Write-Host "  Set device   : [Environment]::SetEnvironmentVariable('VD_DEVICE','<name>','User')"
+Write-Host "  (The overlay shows which mic is active on every recording)"

@@ -5,11 +5,15 @@ __pycache__/
 venv/
 .env
 .DS_Store
+Thumbs.db
+node_modules/
+*.log
+
+# audio / transcript artifacts
 *.wav
 *.mp3
 *.srt
 *.vtt
 *.json
-*.txt
 *.summary.md
 day-summary.md
