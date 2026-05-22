@@ -76,7 +76,7 @@ if ($Device -eq 'cuda') {
 Write-Host "==> Copying scripts"
 $scripts = @(
     'transcribe.py', 'transcribe_server.py', 'transcribe_client.py',
-    'recorder.py', 'overlay.py', 'llm_cleanup.py'
+    'recorder.py', 'overlay.py', 'llm_cleanup.py', 'history.py'
 )
 foreach ($s in $scripts) {
     Copy-Item (Join-Path $RepoDir $s) (Join-Path $InstallDir $s) -Force

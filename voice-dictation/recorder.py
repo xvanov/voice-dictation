@@ -378,14 +378,25 @@ def _recording_thread(recorder: AudioRecorder, overlay) -> None:
         timing += f"  {t_cleanup:.3f}s {cleanup_backend}"
 
     if overlay:
-        overlay.update(text, timing)
+        overlay.show_done(text, timing)
 
     # Paste before overlay closes — user's window still has focus since we
     # never stole it.
     _auto_paste()
 
-    if overlay:
-        overlay.close()
+    # History append (async-safe, fast JSONL append)
+    try:
+        import history as vd_history
+        model_info = _read_server_info()
+        vd_history.append_entry(
+            text,
+            whisper_seconds=t_whisper,
+            cleanup_seconds=t_cleanup if cleanup_backend else None,
+            cleanup_backend=cleanup_backend,
+            whisper_model=model_info,
+        )
+    except Exception:
+        pass
 
 
 def run() -> None:

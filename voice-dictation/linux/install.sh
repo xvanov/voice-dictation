@@ -46,7 +46,7 @@ fi
 
 echo "==> Copying Python scripts"
 for script in transcribe.py transcribe_server.py transcribe_client.py \
-              recorder.py overlay.py llm_cleanup.py; do
+              recorder.py overlay.py llm_cleanup.py history.py; do
     install -m 0644 "$REPO_DIR/$script" "$INSTALL_DIR/$script"
 done
 install -m 0755 "$REPO_DIR/linux/voice-toggle.sh" "$INSTALL_DIR/voice-toggle.sh"

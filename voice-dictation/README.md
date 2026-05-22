@@ -7,6 +7,8 @@ Works on Linux (X11/GNOME) and Windows.
 Features:
 - **VAD auto-stop** — stops recording automatically after ~2 s of silence
 - **Live preview overlay** — borderless always-on-top window streams the transcript as you speak
+- **Done-state controls** — after transcription: Copy (full text), History, and ✕ to dismiss
+- **Transcription history** — today's dictations saved locally; re-copy from overlay or tray menu
 - **LLM cleanup pass** — optional local [Ollama](https://ollama.ai) pass fixes punctuation/capitalisation
 - **Auto-paste** — result lands at the cursor via Ctrl+V simulation
 - **Esc to cancel** — discard the recording at any time
@@ -98,12 +100,36 @@ On Windows, they're baked into `start-server.bat` by the installer.
 | `Ctrl+Alt+V` | Stop early → transcribe (second press) |
 | `Esc` | Cancel and discard recording |
 
+After a successful dictation, the overlay shows timing info plus **Copy**, **History**, and **✕**.
+Copy uses the full cleaned transcript (not the truncated preview). The overlay auto-closes after
+~2.5 s unless you hover a button or open History.
+
+### Transcription history
+
+Successful transcriptions are appended to a local JSONL file:
+
+| Platform | Path |
+|---|---|
+| Windows | `%LOCALAPPDATA%\voice-dictation\history.jsonl` |
+| Linux | `~/.local/voice-dictation/history.jsonl` |
+
+Each line is one JSON object: `timestamp`, `text`, and optional `meta` (whisper/cleanup timing,
+cleanup backend, whisper model). Entries older than **7 days** are pruned automatically.
+
+Open history from the Done overlay (**History** button) or without recording:
+
+- **Windows** — tray icon → *Transcription history…*
+- **Linux** — `~/.local/voice-dictation/voice-toggle.sh --history`
+
+Cancelled recordings and "No speech detected" results are **not** saved.
+
 ## Files
 
 | Path | Purpose |
 |---|---|
 | `recorder.py` | Main orchestrator (VAD, preview, LLM, clipboard, paste) |
-| `overlay.py` | tkinter always-on-top overlay |
+| `overlay.py` | tkinter always-on-top overlay (+ `--history` standalone mode) |
+| `history.py` | Local transcription history (JSONL load/save/prune) |
 | `llm_cleanup.py` | Ollama LLM cleanup pass |
 | `transcribe_server.py` | Always-warm faster-whisper TCP server |
 | `transcribe_client.py` | TCP client (also used by recorder.py internally) |

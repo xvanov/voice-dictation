@@ -10,6 +10,7 @@
 InstallDir  := EnvGet("LOCALAPPDATA") "\voice-dictation"
 PythonwExe  := InstallDir "\venv\Scripts\pythonw.exe"
 RecorderPy  := InstallDir "\recorder.py"
+OverlayPy   := InstallDir "\overlay.py"
 
 TmpDir      := EnvGet("TEMP")
 CancelFlag  := TmpDir "\vd-cancel.flag"
@@ -31,6 +32,7 @@ CleanupMenu.Add("Ollama (local)",    BackendHandler.Bind("ollama"))
 CleanupMenu.Add("Python (instant)",  BackendHandler.Bind("python"))
 
 A_TrayMenu.Add("Cleanup backend", CleanupMenu)
+A_TrayMenu.Add("Transcription history...", HistoryHandler)
 
 ; Checkmark the current selection on startup
 _InitBackendMenu()
@@ -64,6 +66,15 @@ BackendHandler(backend, *) {
     labels := Map("claude", "Claude API", "ollama", "Ollama (local)", "python", "Python (instant)")
     TrayTip("Voice Dictation", "Cleanup: " labels[backend], 0x10)
     SetTimer(() => TrayTip(), -2000)
+}
+
+HistoryHandler(*) {
+    global PythonwExe, OverlayPy, InstallDir
+    if (!FileExist(PythonwExe)) {
+        ShowToast("recorder not installed -- re-run install.ps1")
+        return
+    }
+    Run('"' PythonwExe '" "' OverlayPy '" --history', InstallDir, "Hide")
 }
 
 ; ---------------------------------------------------------------------------
