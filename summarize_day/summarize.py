@@ -2,7 +2,7 @@ import json
 import sys
 from pathlib import Path
 
-from openai import OpenAI
+from openai import AzureOpenAI
 
 from .config import AzureConfig
 
@@ -40,12 +40,11 @@ Output ONLY the markdown summary. Do not narrate what you did.
 {input_block}"""
 
 
-def _build_client(cfg: AzureConfig) -> OpenAI:
-    base = cfg.endpoint.rstrip("/")
-    return OpenAI(
+def _build_client(cfg: AzureConfig) -> AzureOpenAI:
+    return AzureOpenAI(
+        azure_endpoint=cfg.endpoint.rstrip("/"),
         api_key=cfg.api_key,
-        base_url=f"{base}/v1",
-        default_headers={"api-key": cfg.api_key},
+        api_version=cfg.api_version,
     )
 
 
@@ -55,7 +54,7 @@ def _call_llm(cfg: AzureConfig, prompt: str) -> str:
         model=cfg.deployment,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
-        max_tokens=4096,
+        max_completion_tokens=4096,
     )
     text = resp.choices[0].message.content.strip()
     if text.startswith("<think>"):
@@ -79,7 +78,9 @@ def summarize_transcript(
         )
         return text
 
-    result = _call_llm(cfg, TRANSCRIPT_SUMMARY_PROMPT)
+    transcript = json_path.read_text(encoding="utf-8")
+    prompt = f"{TRANSCRIPT_SUMMARY_PROMPT}\n\n---\n\nTranscript JSON:\n\n{transcript}"
+    result = _call_llm(cfg, prompt)
     summary_path.write_text(result + "\n")
     print(f"summarize-transcript: wrote {summary_path}", file=sys.stderr)
     return result

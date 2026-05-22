@@ -74,9 +74,9 @@ def transcribe_file(
 
     seg_records = []
     last_print = 0.0
-    with open(srt_path, "w") as fsrt, open(vtt_path, "w") as fvtt, open(
-        txt_path, "w"
-    ) as ftxt:
+    with open(srt_path, "w", encoding="utf-8") as fsrt, open(
+        vtt_path, "w", encoding="utf-8"
+    ) as fvtt, open(txt_path, "w", encoding="utf-8") as ftxt:
         fvtt.write("WEBVTT\n\n")
         for i, seg in enumerate(segments, 1):
             start, end, text = seg.start, seg.end, seg.text.strip()
