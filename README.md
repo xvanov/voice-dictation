@@ -95,3 +95,51 @@ The weights download to `~/.cache/huggingface/hub/` (Linux) or
 
 See [AGENT.md](AGENT.md) for step-by-step install instructions structured for
 coding agents.
+
+---
+
+## summarize-day — batch transcription & summarization
+
+Also included in this repo: **summarize-day**, a CLI tool that transcribes long
+audio recordings with faster-whisper and summarizes them via Azure AI Foundry.
+It's the same engine as the dictation tool but geared for batch processing.
+
+### Requirements
+
+- Python 3.10+
+- An Azure AI Foundry endpoint + API key
+
+### Configuration (environment variables)
+
+| Variable | Description |
+|---|---|
+| `AZURE_FOUNDRY_ENDPOINT` | Azure AI Foundry endpoint URL |
+| `AZURE_FOUNDRY_API_KEY` | API key |
+| `AZURE_FOUNDRY_API_VERSION` | API version (default: `2024-05-01-preview`) |
+| `AZURE_FOUNDRY_DEPLOYMENT` | Model name (default: `deepseek-r1`) |
+
+### Usage
+
+```bash
+# Full pipeline: transcribe then summarize
+./summarize-day.py run recording.mp3
+./summarize-day.py run /path/to/recordings/
+
+# Step by step
+./summarize-day.py transcribe recording.mp3
+./summarize-day.py summarize recording.json
+
+# Combine existing summaries into a day-summary
+./summarize-day.py combine /path/to/recordings/
+```
+
+Options: `--force` to redo, `--device cpu` for CPU, `--model tiny` for smaller model.
+
+### Output
+
+For each audio file `recording.mp3`:
+- `recording.json` — aligned segments with timestamps
+- `recording.srt` / `recording.vtt` / `recording.txt` — subtitle/text exports
+- `recording.summary.md` — AI-generated summary
+
+When processing multiple files, `day-summary.md` merges them into one digest.
