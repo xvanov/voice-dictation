@@ -1,4 +1,4 @@
-# ai-tools
+# dev-tools
 
 Internal tooling for AI-assisted workflows: push-to-talk dictation, batch transcription/summarization, and Claude Code utilities.
 
@@ -11,6 +11,13 @@ Internal tooling for AI-assisted workflows: push-to-talk dictation, batch transc
 | [claude-ctx-statusline](./claude-ctx-statusline/) | Shows context window usage in the Claude Code status bar |
 
 ## Quick start
+
+Clone:
+
+```bash
+git clone https://github.com/xvanov/dev-tools.git
+cd dev-tools
+```
 
 ### Voice dictation (Windows)
 
@@ -54,9 +61,10 @@ Restart Claude Code to see `Ctx: 30k/200k (15%)` in the status bar.
 ## Repo layout
 
 ```
-voice-dictation/          # real-time dictation (recorder + overlay + warm server)
-summarize-day/              # batch transcribe + Azure summarization CLI
-claude-ctx-statusline/      # Claude Code statusLine helper
+dev-tools/
+├── voice-dictation/          # real-time dictation (recorder + overlay + warm server)
+├── summarize-day/            # batch transcribe + Azure summarization CLI
+└── claude-ctx-statusline/    # Claude Code statusLine helper
 ```
 
 Each tool has its own README, requirements, and install scripts.

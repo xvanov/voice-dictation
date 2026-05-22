@@ -38,8 +38,8 @@ early and proceeds to transcription.
 
 2. **Clone the repo** (the agent should have done this already to read this file):
    ```bash
-   git clone https://github.com/xvanov/voice-dictation.git ~/voice-dictation
-   cd ~/voice-dictation/voice-dictation
+   git clone https://github.com/xvanov/dev-tools.git ~/dev-tools
+   cd ~/dev-tools/voice-dictation
    ```
 
 3. **Run the installer**:
@@ -101,8 +101,8 @@ early and proceeds to transcription.
 
 1. **Clone the repo**:
    ```powershell
-   git clone https://github.com/xvanov/voice-dictation.git $env:USERPROFILE\voice-dictation
-   cd $env:USERPROFILE\voice-dictation\voice-dictation
+   git clone https://github.com/xvanov/dev-tools.git $env:USERPROFILE\dev-tools
+   cd $env:USERPROFILE\dev-tools\voice-dictation
    ```
 
 2. **Open an elevated PowerShell** and run the installer:
@@ -217,7 +217,7 @@ reuses the existing venv and model cache.
 
 ## Uninstall
 
-- Linux: `~/voice-dictation/voice-dictation/linux/uninstall.sh`
+- Linux: `~/dev-tools/voice-dictation/linux/uninstall.sh`
 - Windows: `.\windows\uninstall.ps1` from an elevated PowerShell.
 
 Both leave the model cache (`~/.cache/huggingface`) intact. Delete it manually

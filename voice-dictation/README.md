@@ -29,8 +29,8 @@ hotkey (Ctrl+Alt+V)
 ### Linux (Ubuntu / GNOME)
 
 ```bash
-git clone https://github.com/xvanov/voice-dictation.git
-cd voice-dictation/voice-dictation
+git clone https://github.com/xvanov/dev-tools.git
+cd dev-tools/voice-dictation
 ./linux/install.sh
 ```
 
