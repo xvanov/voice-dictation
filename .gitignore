@@ -16,4 +16,4 @@ node_modules/
 *.vtt
 *.json
 *.summary.md
-day-summary.md
+combined-summary.md

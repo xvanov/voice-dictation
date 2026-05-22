@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Transcribe audio with faster-whisper and summarize via Azure AI Foundry.
+"""Transcribe audio with faster-whisper and summarize via Azure OpenAI.
 
 Usage:
-  summarize-day.py transcribe <audio>
-  summarize-day.py summarize <json>
-  summarize-day.py run <file-or-dir>...
-  summarize-day.py combine <file-or-dir>...
+  summarize-recording.py transcribe <audio>
+  summarize-recording.py summarize <json>
+  summarize-recording.py run <file-or-dir>...
+  summarize-recording.py combine <file-or-dir>...
 
 Environment (repo-root .env or shell):
   AZURE_FOUNDRY_ENDPOINT     Azure AI Foundry endpoint URL
@@ -13,6 +13,6 @@ Environment (repo-root .env or shell):
   AZURE_FOUNDRY_API_VERSION  API version (default: 2024-05-01-preview)
   AZURE_FOUNDRY_DEPLOYMENT   Model name (default: deepseek-r1)
 """
-from summarize_day.cli import cli
+from summarize_recording.cli import cli
 
 cli()

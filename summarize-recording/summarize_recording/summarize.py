@@ -7,28 +7,28 @@ from openai import AzureOpenAI
 from .config import AzureConfig
 
 TRANSCRIPT_SUMMARY_PROMPT = """\
-Read the Whisper transcript and produce a summary of what was spoken about.
+Read the Whisper transcript and produce a summary of what was spoken in this recording.
 
 Context:
-- Captured by a voice-activated recorder, so speech is non-continuous.
+- This is a transcript of an audio recording; speech may be non-continuous or include pauses.
 - Whisper output may have run-on text with little punctuation/capitalization. Infer sentence and topic boundaries from context.
 - The JSON has shape: {audio, model, language, duration, segments: [{id, start, end, text}, ...]}. start/end are in seconds; convert to HH:MM when referencing time ranges.
 
 Produce a markdown document with these sections:
-1. **TL;DR** — one paragraph: what was this person working on or thinking about?
+1. **TL;DR** — one paragraph: what was this recording about?
 2. **Topics** — group segments into coherent topics. For each: a short heading, an approximate HH:MM range, and 2-5 bullets of what was discussed/decided/asked. Don't summarize segment-by-segment.
 3. **Follow-ups & notable items** — recurring themes, decisions, open questions, names of tools/projects mentioned, things to follow up on.
 
-Style: terse, factual, paraphrased — no fluff, no long quotes. Skip filler (false starts, repeated retries with the LLM). Aim for under 600 words.
+Style: terse, factual, paraphrased — no fluff, no long quotes. Skip filler (false starts, repeated retries). Aim for under 600 words.
 
 Output ONLY the markdown summary. Do not narrate what you did."""
 
-DAY_COMBINE_PROMPT = """\
-Below are summaries of {count} audio recordings made throughout one day. Combine them into a single coherent day summary.
+RECORDINGS_COMBINE_PROMPT = """\
+Below are summaries of {count} audio recordings. Combine them into a single coherent summary.
 
 Produce markdown with:
-1. **TL;DR** — one paragraph covering the whole day.
-2. **Topics across the day** — merge related topics that span multiple recordings. For each: short heading and 2-5 bullets. Reference recordings by name if useful.
+1. **TL;DR** — one paragraph covering all recordings.
+2. **Topics across recordings** — merge related topics that span multiple files. For each: short heading and 2-5 bullets. Reference recordings by name if useful.
 3. **Follow-ups & notable items** — consolidated.
 
 Style: terse, factual, paraphrased. Aim for under 800 words.
@@ -93,7 +93,7 @@ def combine_summaries(
     for name, text in summaries:
         input_block += f"## Recording: {name}\n\n{text}\n\n---\n\n"
 
-    prompt = DAY_COMBINE_PROMPT.format(
+    prompt = RECORDINGS_COMBINE_PROMPT.format(
         count=len(summaries), input_block=input_block
     )
 
@@ -101,5 +101,5 @@ def combine_summaries(
 
     if output_path:
         output_path.write_text(result + "\n")
-        print(f"summarize-day: wrote {output_path}", file=sys.stderr)
+        print(f"summarize-recording: wrote {output_path}", file=sys.stderr)
     return result

@@ -7,7 +7,7 @@ Internal tooling for AI-assisted workflows: push-to-talk dictation, batch transc
 | Tool | Description |
 |------|-------------|
 | [voice-dictation](./voice-dictation/) | Push-to-talk voice transcription via faster-whisper → auto-paste (Windows + Linux) |
-| [summarize-day](./summarize-day/) | Batch transcribe long recordings and summarize via Azure OpenAI |
+| [summarize-recording](./summarize-recording/) | Transcribe and summarize audio recordings via Azure OpenAI |
 | [claude-ctx-statusline](./claude-ctx-statusline/) | Shows context window usage in the Claude Code status bar |
 
 ## Quick start
@@ -38,15 +38,15 @@ cd voice-dictation
 
 Bind `~/.local/voice-dictation/voice-toggle.sh` to `Ctrl+Alt+V` in keyboard settings.
 
-### summarize-day
+### summarize-recording
 
 ```bash
-cd summarize-day
+cd summarize-recording
 python -m venv .venv
 source .venv/bin/activate   # Windows: .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 # Set AZURE_OPENAI_* or AZURE_FOUNDRY_* in repo-root .env
-python summarize-day.py run recording.mp3
+python summarize-recording.py run recording.mp3
 ```
 
 ### Claude context status line
@@ -63,7 +63,7 @@ Restart Claude Code to see `Ctx: 30k/200k (15%)` in the status bar.
 ```
 dev-tools/
 ├── voice-dictation/          # real-time dictation (recorder + overlay + warm server)
-├── summarize-day/            # batch transcribe + Azure summarization CLI
+├── summarize-recording/      # transcribe + Azure summarization CLI
 └── claude-ctx-statusline/    # Claude Code statusLine helper
 ```
 

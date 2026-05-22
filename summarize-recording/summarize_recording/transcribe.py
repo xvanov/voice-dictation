@@ -137,5 +137,5 @@ def collect_audio_files(paths: list[str]) -> list[Path]:
         elif pp.is_file():
             files.append(pp)
         else:
-            print(f"summarize-day: skipping (not a file or dir): {pp}", file=sys.stderr)
+            print(f"summarize-recording: skipping (not a file or dir): {pp}", file=sys.stderr)
     return files

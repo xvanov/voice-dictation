@@ -1,8 +1,8 @@
-# summarize-day
+# summarize-recording
 
-Batch transcribe long audio recordings with faster-whisper and summarize them via Azure OpenAI / AI Foundry.
+Transcribe an audio recording with faster-whisper and summarize it via Azure OpenAI / AI Foundry.
 
-Same Whisper engine as [voice-dictation](../voice-dictation/), but geared for offline batch processing of meetings and day recordings.
+Works for meetings, voice memos, dictation sessions, or any spoken audio. Process one file or batch many and optionally merge summaries.
 
 ## Requirements
 
@@ -32,15 +32,15 @@ pip install -r requirements.txt
 
 ```bash
 # Full pipeline: transcribe then summarize
-python summarize-day.py run recording.mp3
-python summarize-day.py run /path/to/recordings/
+python summarize-recording.py run recording.mp3
+python summarize-recording.py run /path/to/recordings/
 
 # Step by step
-python summarize-day.py transcribe recording.mp3
-python summarize-day.py summarize recording.json
+python summarize-recording.py transcribe recording.mp3
+python summarize-recording.py summarize recording.json
 
-# Combine existing summaries into a day-summary
-python summarize-day.py combine /path/to/recordings/
+# Combine existing summaries into one digest
+python summarize-recording.py combine /path/to/recordings/
 ```
 
 Options: `--force` to redo, `--device cpu` for CPU, `--model tiny` for a smaller model.
@@ -53,4 +53,4 @@ For each audio file `recording.mp3`:
 - `recording.srt` / `recording.vtt` / `recording.txt` — subtitle/text exports
 - `recording.summary.md` — AI-generated summary
 
-When processing multiple files, `day-summary.md` merges them into one digest.
+When processing multiple files, `combined-summary.md` merges them into one digest.

@@ -10,7 +10,7 @@ from .transcribe import collect_audio_files, transcribe_file
 
 @click.group()
 def cli():
-    """Transcribe audio with faster-whisper and summarize via Azure AI Foundry."""
+    """Transcribe audio recordings with faster-whisper and summarize via Azure OpenAI."""
 
 
 @cli.command()
@@ -72,11 +72,11 @@ def run(paths, force):
 
     files = collect_audio_files(list(paths))
     if not files:
-        click.echo("summarize-day: no audio files to process", err=True)
+        click.echo("summarize-recording: no audio files to process", err=True)
         sys.exit(1)
 
     click.echo(
-        f"summarize-day: processing {len(files)} file(s)", err=True
+        f"summarize-recording: processing {len(files)} file(s)", err=True
     )
 
     summaries: list[tuple[str, str]] = []
@@ -96,7 +96,7 @@ def run(paths, force):
         return
 
     combo_dir = files[0].parent
-    combo_path = combo_dir / "day-summary.md"
+    combo_path = combo_dir / "combined-summary.md"
     click.echo(
         f"\n===== combining {len(summaries)} summaries -> {combo_path} =====",
         err=True,
@@ -109,7 +109,7 @@ def run(paths, force):
 @click.argument("paths", nargs=-1, required=True)
 @click.option("--force", is_flag=True, help="Redo existing outputs")
 def combine(paths, force):
-    """Combine existing .summary.md files into a day-summary."""
+    """Combine existing .summary.md files into a combined summary."""
     cfg = AzureConfig()
     if not cfg.is_configured():
         click.echo(
@@ -130,15 +130,15 @@ def combine(paths, force):
             summaries.append((pp.stem, pp.read_text().strip()))
         else:
             click.echo(
-                f"summarize-day: skipping (not a file or dir): {pp}", err=True
+                f"summarize-recording: skipping (not a file or dir): {pp}", err=True
             )
 
     if not summaries:
-        click.echo("summarize-day: no summary files found", err=True)
+        click.echo("summarize-recording: no summary files found", err=True)
         sys.exit(1)
 
     combo_dir = Path(paths[0]).parent if len(paths) == 1 else Path.cwd()
-    combo_path = combo_dir / "day-summary.md"
+    combo_path = combo_dir / "combined-summary.md"
     click.echo(
         f"\n===== combining {len(summaries)} summaries -> {combo_path} =====",
         err=True,
