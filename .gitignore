@@ -9,3 +9,5 @@ venv/
 *.mp3
 *.srt
 *.vtt
+*.summary.md
+day-summary.md
