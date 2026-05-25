@@ -296,105 +296,116 @@ class Overlay:
 
         sw = self._root.winfo_screenwidth()
         sh = self._root.winfo_screenheight()
-        w, h = 480, 360
+        w, h = 760, 560
         x = (sw - w) // 2
         y = (sh - h) // 2
         win.geometry(f"{w}x{h}+{x}+{y}")
 
         ftitle = tkfont.Font(family="Segoe UI", size=11, weight="bold")
-        frow = tkfont.Font(family="Segoe UI", size=10)
-        fpreview = tkfont.Font(family="Segoe UI", size=9)
+        ftime = tkfont.Font(family="Segoe UI", size=10)
+        ftext = tkfont.Font(family="Segoe UI", size=10)
         fbtn = tkfont.Font(family="Segoe UI", size=9)
 
         header = tk.Frame(win, bg="#1a1a1a", padx=12, pady=8)
         header.pack(fill="x")
-        tk.Label(
+        title_lbl = tk.Label(
             header, text="Today's transcriptions", font=ftitle,
-            fg="#4fc3f7", bg="#1a1a1a",
-        ).pack(side="left")
+            fg="#4fc3f7", bg="#1a1a1a", cursor="fleur",
+        )
+        title_lbl.pack(side="left")
         tk.Button(
             header, text="✕", font=fbtn, fg="#cccccc", bg="#333333",
-            relief="flat", width=3, command=lambda: self._close_history_panel(win),
+            activebackground="#555555", relief="flat", width=3,
+            command=lambda: self._close_history_panel(win),
         ).pack(side="right")
 
+        # Drag-to-move on header (since overrideredirect hides the titlebar)
+        drag = {"x": 0, "y": 0}
+        def _drag_start(e):
+            drag["x"] = e.x_root - win.winfo_x()
+            drag["y"] = e.y_root - win.winfo_y()
+        def _drag_move(e):
+            win.geometry(f"+{e.x_root - drag['x']}+{e.y_root - drag['y']}")
+        for w_ in (header, title_lbl):
+            w_.bind("<Button-1>", _drag_start)
+            w_.bind("<B1-Motion>", _drag_move)
+
         list_frame = tk.Frame(win, bg="#1a1a1a")
-        list_frame.pack(fill="both", expand=True, padx=12, pady=(0, 8))
+        list_frame.pack(fill="both", expand=True, padx=12, pady=(0, 12))
 
         canvas = tk.Canvas(list_frame, bg="#252525", highlightthickness=0)
         scrollbar = tk.Scrollbar(list_frame, orient="vertical", command=canvas.yview)
         inner = tk.Frame(canvas, bg="#252525")
-        inner.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=inner, anchor="nw", width=w - 40)
+        inner_id = canvas.create_window((0, 0), window=inner, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        detail_frame = tk.Frame(win, bg="#1a1a1a", padx=12, pady=8)
-        detail_frame.pack(fill="x")
+        text_labels: list[tk.Label] = []
+        TIME_COL = 88
+        COPY_COL = 78
+        INNER_PAD = 32
 
-        detail_text = tk.Text(
-            detail_frame, height=4, wrap="word", font=fpreview,
-            fg="#e0e0e0", bg="#252525", relief="flat", padx=8, pady=6,
-        )
-        detail_text.pack(fill="x", pady=(0, 6))
-        detail_text.config(state="disabled")
+        def _on_canvas_resize(event):
+            canvas.itemconfigure(inner_id, width=event.width)
+            wrap = max(120, event.width - TIME_COL - COPY_COL - INNER_PAD)
+            for lbl in text_labels:
+                lbl.configure(wraplength=wrap)
 
-        copy_row = tk.Frame(detail_frame, bg="#1a1a1a")
-        copy_row.pack(fill="x")
-        detail_copy_btn = tk.Button(
-            copy_row, text="Copy", font=fbtn,
-            fg="#e0e0e0", bg="#333333", relief="flat", padx=12, pady=2,
-            state="disabled",
-        )
-        detail_copy_btn.pack(side="left")
+        canvas.bind("<Configure>", _on_canvas_resize)
+        inner.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
 
-        selected_text = [""]
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-event.delta / 120), "units")
+        win.bind_all("<MouseWheel>", _on_mousewheel)
 
-        def select_entry(entry: dict):
-            full = entry.get("text", "")
-            selected_text[0] = full
-            detail_text.config(state="normal")
-            detail_text.delete("1.0", "end")
-            detail_text.insert("1.0", full)
-            detail_text.config(state="disabled")
-            detail_copy_btn.config(state="normal" if full else "disabled")
-
-        def copy_selected():
-            if selected_text[0]:
-                pyperclip.copy(selected_text[0])
-                orig = detail_copy_btn.cget("text")
-                detail_copy_btn.config(text="Copied!")
-                win.after(_COPY_FEEDBACK_MS, lambda: detail_copy_btn.config(text=orig))
-
-        detail_copy_btn.config(command=copy_selected)
+        def _copy_text(text: str, btn: tk.Button):
+            if not text:
+                return
+            pyperclip.copy(text)
+            orig = btn.cget("text")
+            btn.config(text="Copied!")
+            win.after(_COPY_FEEDBACK_MS, lambda: btn.config(text=orig))
 
         entries = history.list_today()
         if not entries:
             tk.Label(
-                inner, text="No transcriptions yet today.", font=frow,
+                inner, text="No transcriptions yet today.", font=ftext,
                 fg="#888888", bg="#252525", padx=8, pady=12,
             ).pack(fill="x")
         else:
             for entry in entries:
-                row = tk.Frame(inner, bg="#2a2a2a", pady=1)
-                row.pack(fill="x", padx=4, pady=2)
+                full = entry.get("text", "")
                 ts = history.format_time(entry.get("timestamp", ""))
-                snippet = history.preview(entry.get("text", ""))
+
+                row = tk.Frame(inner, bg="#2a2a2a")
+                row.pack(fill="x", padx=4, pady=2)
+
                 tk.Label(
-                    row, text=ts, font=frow, fg="#4fc3f7", bg="#2a2a2a",
-                    width=10, anchor="w", padx=8, pady=6,
-                ).pack(side="left")
+                    row, text=ts, font=ftime, fg="#4fc3f7", bg="#2a2a2a",
+                    width=10, anchor="nw", padx=8, pady=8,
+                ).pack(side="left", fill="y")
+
+                copy_btn = tk.Button(
+                    row, text="Copy", font=fbtn,
+                    fg="#e0e0e0", bg="#333333", activebackground="#555555",
+                    relief="flat", padx=10, pady=2, cursor="hand2",
+                )
+                copy_btn.config(command=lambda t=full, b=copy_btn: _copy_text(t, b))
+                copy_btn.pack(side="right", padx=(4, 8), pady=8)
+
                 lbl = tk.Label(
-                    row, text=snippet, font=fpreview, fg="#cccccc", bg="#2a2a2a",
-                    anchor="w", padx=4, pady=6, cursor="hand2",
+                    row, text=full, font=ftext, fg="#e0e0e0", bg="#2a2a2a",
+                    anchor="nw", justify="left", padx=4, pady=8, wraplength=400,
                 )
                 lbl.pack(side="left", fill="x", expand=True)
-                lbl.bind("<Button-1>", lambda e, ent=entry: select_entry(ent))
-                row.bind("<Button-1>", lambda e, ent=entry: select_entry(ent))
-                row.bind("<Enter>", lambda e, r=row: r.config(bg="#333333"))
-                row.bind("<Leave>", lambda e, r=row: r.config(bg="#2a2a2a"))
+                text_labels.append(lbl)
 
         def on_history_close():
+            try:
+                win.unbind_all("<MouseWheel>")
+            except tk.TclError:
+                pass
             self._history_open = False
             self._history_win = None
             if self._done and not self._history_only:
@@ -403,7 +414,7 @@ class Overlay:
                 self._close_now()
 
         win.protocol("WM_DELETE_WINDOW", lambda: self._close_history_panel(win))
-        win.bind("<Destroy>", lambda _: on_history_close())
+        win.bind("<Destroy>", lambda e, w_=win: on_history_close() if e.widget is w_ else None)
 
         win.bind("<Enter>", lambda _: self._set_interacting(True))
         win.bind("<Leave>", lambda _: self._set_interacting(False))
